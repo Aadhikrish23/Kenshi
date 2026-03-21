@@ -1,9 +1,12 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "ES5",
     "module": "commonjs",
-    "outDir": "build",
-    "rootDir": "modules",
+    "outDir": "./modules",
+    "rootDir": "./modules",
     "strict": false,
-  }
+    "esModuleInterop": true
+  },
+  "include": ["modules/**/*.ts"],
+  "exclude": []
 }

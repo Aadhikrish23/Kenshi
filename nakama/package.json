@@ -11,5 +11,8 @@
   "license": "ISC",
   "dependencies": {
     "nakama-runtime": "github:heroiclabs/nakama-common"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
   }
 }

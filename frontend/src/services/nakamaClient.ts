@@ -6,34 +6,44 @@ let session: Session;
 let socket: Socket;
 
 export async function connectToNakama() {
-  // Create user (no login needed)
-  session = await client.authenticateDevice(
-    Math.random().toString()
-  );
+  session = await client.authenticateDevice(Math.random().toString());
 
   console.log("Authenticated:", session);
 
-  // Create socket
   socket = client.createSocket();
-
-  // Connect realtime
   await socket.connect(session, true);
 
   console.log("Socket connected");
 
-  return { client, session, socket };
+  return { client, session, socket, userId: session.user_id };
 }
-export async function createMatch(socket: Socket) {
-  const match = await socket.createMatch("tic-tac-toe");
 
-  console.log("Match created:", match.match_id);
+// ✅ THIS IS CORRECT (KEEP THIS)
+export async function createMatch(
+  client: Client,
+  session: Session,
+): Promise<string> {
+  const res = await client.rpc(session, "create_match", {});
 
-  return match.match_id;
+  const parsed =
+    typeof res.payload === "string" ? JSON.parse(res.payload) : res.payload;
+  console.log("Match created:", parsed.matchId);
+
+  return parsed.matchId;
 }
+
+// ✅ THIS IS ALSO CORRECT
 export async function joinMatch(socket: Socket, matchId: string) {
-  const match = await socket.joinMatch(matchId);
+  for (let i = 0; i < 3; i++) {
+    try {
+      const match = await socket.joinMatch(matchId);
+      console.log("Joined match:", match);
+      return match;
+    } catch (err) {
+      console.log("Retrying join...", i);
+      await new Promise((res) => setTimeout(res, 300));
+    }
+  }
 
-  console.log("Joined match:", match);
-
-  return match;
+  throw new Error("Failed to join match after retries");
 }
