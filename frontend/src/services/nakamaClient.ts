@@ -1,49 +1,92 @@
-import { Client, Session, type Socket } from "@heroiclabs/nakama-js";
+import { Client, type Session, type Socket } from "@heroiclabs/nakama-js";
 
-const client = new Client("defaultkey", "127.0.0.1", "7350");
+/**
+ * Generate or reuse a per-tab device ID
+ */
+function getDeviceId(): string {
+  let deviceId = sessionStorage.getItem("deviceId");
 
-let session: Session;
-let socket: Socket;
-
-export async function connectToNakama() {
-  session = await client.authenticateDevice(Math.random().toString());
-
-  console.log("Authenticated:", session);
-
-  socket = client.createSocket();
-  await socket.connect(session, true);
-
-  console.log("Socket connected");
-
-  return { client, session, socket, userId: session.user_id };
-}
-
-// ✅ THIS IS CORRECT (KEEP THIS)
-export async function createMatch(
-  client: Client,
-  session: Session,
-): Promise<string> {
-  const res = await client.rpc(session, "create_match", {});
-
-  const parsed =
-    typeof res.payload === "string" ? JSON.parse(res.payload) : res.payload;
-  console.log("Match created:", parsed.matchId);
-
-  return parsed.matchId;
-}
-
-// ✅ THIS IS ALSO CORRECT
-export async function joinMatch(socket: Socket, matchId: string) {
-  for (let i = 0; i < 3; i++) {
-    try {
-      const match = await socket.joinMatch(matchId);
-      console.log("Joined match:", match);
-      return match;
-    } catch (err) {
-      console.log("Retrying join...", i);
-      await new Promise((res) => setTimeout(res, 300));
-    }
+  if (!deviceId) {
+    deviceId = crypto.randomUUID();
+    sessionStorage.setItem("deviceId", deviceId);
   }
 
-  throw new Error("Failed to join match after retries");
+  return deviceId;
+}
+
+/**
+ * CONNECT TO NAKAMA
+ */
+export async function connectToNakama() {
+  const client = new Client("defaultkey", "127.0.0.1", "7350", false);
+
+  // ✅ IMPORTANT: isolate session per tab
+
+  const deviceId = getDeviceId();
+
+  console.log("🔑 Device ID:", deviceId);
+
+  const session: Session = await client.authenticateDevice(
+    deviceId,
+    undefined,
+     // create if not exists
+  );
+
+  console.log("✅ Connected as user:", session.user_id);
+
+  const socket: Socket = client.createSocket();
+
+  await socket.connect(session, true);
+
+  console.log("🔌 Socket connected");
+
+  return {
+    client,
+    session,
+    socket,
+    userId: session.user_id,
+  };
+}
+
+/**
+ * CREATE MATCH
+ */
+export async function createMatch(socket: Socket) {
+  const rpc = await socket.rpc("create_match", "");
+  const data = JSON.parse(rpc.payload!);
+
+  console.log("🎮 Match created:", data.matchId);
+
+  return data.matchId;
+}
+
+/**
+ * JOIN MATCH
+ */
+export async function joinMatch(socket: Socket, matchId: string) {
+  const match = await socket.joinMatch(matchId);
+
+  console.log("🎯 Joined match:", match.match_id);
+  console.log("👤 Me:", match.self);
+
+  // ❌ DO NOT rely on presences
+  // console.log("👥 Players:", match.presences);
+
+  return match;
+}
+
+/**
+ * SEND MOVE (you'll need this next)
+ */
+export async function sendMove(
+  socket: Socket,
+  matchId: string,
+  index: number
+) {
+await socket.sendMatchState(
+  matchId,
+  1,
+  new TextEncoder().encode(JSON.stringify({ index }))
+);
+  console.log("📤 Move sent:", index);
 }

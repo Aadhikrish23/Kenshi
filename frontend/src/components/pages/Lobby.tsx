@@ -1,110 +1,60 @@
-import { useEffect, useState } from "react";
-import {
-  connectToNakama,
-  createMatch,
-  joinMatch,
-} from "../../services/nakamaClient";
-import Game from "./GameBoard";
-function Lobby() {
-  const [socket, setSocket] = useState<any>(null);
-  const [userId, setUserId] = useState<string>("");
+import { useState, useRef } from "react";
+import { connectToNakama, createMatch, joinMatch } from "../../services/nakamaClient";
+import GameBoard from "./GameBoard";
+
+export default function Lobby() {
   const [matchId, setMatchId] = useState("");
   const [inputId, setInputId] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [client, setClient] = useState<any>(null);
-  const [session, setSession] = useState<any>(null);
+  const [socket, setSocket] = useState<any>(null);
+  const [userId, setUserId] = useState("");
+  const [inGame, setInGame] = useState(false);
 
-  useEffect(() => {
-    async function init() {
-      try {
-        const { client, session, socket, userId } = await connectToNakama();
-        if (!socket || !userId) {
-          return;
-        }
-        setClient(client);
-        setSession(session);
-        setSocket(socket);
-        setUserId(userId);
+  const hasConnected = useRef(false);
 
-        setSocket(socket);
-        setUserId(userId);
-      } catch (err) {
-        console.error("Connection failed:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
 
-    init();
-  }, []);
-
-  // 🎮 CREATE
 async function handleCreate() {
-  if (!socket || !client || !session) return;
+  const { socket, userId } = await connectToNakama();
 
-  try {
-    const id = await createMatch(client, session);
+  setSocket(socket);
+  setUserId(userId!);
 
-    await socket.joinMatch(id);
+  const id = await createMatch(socket);
+  setMatchId(id);
 
-    setMatchId(id);
-  } catch (err) {
-    console.error("Create failed:", err);
-  }
+  await joinMatch(socket, id);
+
+  setInGame(true);
 }
 
-  // 🔗 JOIN
-  async function handleJoin() {
-    if (!socket || !inputId) return;
+async function handleJoin() {
+  const { socket, userId } = await connectToNakama();
 
-    try {
-      const cleanId = inputId.trim();
+  setSocket(socket);
+  setUserId(userId!);
 
-      console.log("Joining with ID:", cleanId);
+  const match = await joinMatch(socket, inputId);
 
-      await joinMatch(socket, cleanId);
+  setMatchId(match.match_id);
+  setInGame(true);
+}
 
-      setMatchId(cleanId);
-    } catch (err) {
-      console.error("Join failed:", err);
-    }
-  }
-
-  if (loading) {
-    return <div style={{ padding: "20px" }}>Connecting...</div>;
-  }
-
-  if (matchId && socket) {
-    return <Game socket={socket} matchId={matchId} userId={userId} />;
+  if (inGame) {
+    return (
+      <GameBoard socket={socket} matchId={matchId} userId={userId} />
+    );
   }
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>Tic Tac Toe</h2>
-
+    <div>
       <button onClick={handleCreate}>Create Match</button>
 
-      {matchId && (
-        <>
-          <p>Match ID: {matchId}</p>
-          <button onClick={() => navigator.clipboard.writeText(matchId)}>
-            Copy ID
-          </button>
-        </>
-      )}
-
-      <hr />
-
       <input
-        style={{ width: "400px" }}
-        placeholder="Enter Match ID"
         value={inputId}
         onChange={(e) => setInputId(e.target.value)}
+        placeholder="Enter Match ID"
       />
 
       <button onClick={handleJoin}>Join Match</button>
     </div>
   );
 }
-
-export default Lobby;

@@ -3,40 +3,35 @@ import { useEffect, useState } from "react";
 export function useGame(socket: any, matchId: string) {
   const [gameState, setGameState] = useState<any>(null);
 
- useEffect(() => {
-  if (!socket) return;
+  useEffect(() => {
+    if (!socket) return;
 
-  console.log("🎯 Attaching match listener...");
+    console.log("🎯 Listening for match:", matchId);
 
-  socket.onmatchdata = (data: any) => {
-    console.log("🔥 RAW:", data);
+    socket.onmatchdata = (msg: any) => {
+      const decoded = JSON.parse(
+        new TextDecoder().decode(msg.data)
+      );
 
-    try {
-      const decoded = new TextDecoder().decode(data.data);
-      const parsed = JSON.parse(decoded);
+      if (decoded.type === "state_update") {
+        const newState = decoded.state;
 
-      console.log("✅ PARSED:", parsed);
+        console.log("📦 STATE UPDATE:", newState);
 
-      if (parsed.type === "state_update") {
-        setGameState(parsed.state);
+        setGameState({ ...newState });// ✅ FIXED
       }
-    } catch (err) {
-      console.error("❌ Parse error:", err);
-    }
-  };
-
-  return () => {
-    socket.onmatchdata = null;
-  };
-}, [socket]);
+    };
+  }, [socket, matchId]);
 
   const makeMove = (index: number) => {
     if (!socket || !matchId) return;
 
+    console.log("📤 Sending move:", index);
+
     socket.sendMatchState(
       matchId,
       1,
-      JSON.stringify({ index })
+      new TextEncoder().encode(JSON.stringify({ index })) // ✅ FIXED
     );
   };
 
