@@ -8,6 +8,7 @@ function createInitialState() {
         turn: null,
         winner: null,
         status: "waiting",
+        reason: null,
         initialStateSent: false,
     };
 }
@@ -53,19 +54,41 @@ function matchJoin(ctx, logger, nk, dispatcher, tick, state, presences) {
         state.status = "playing";
         state.turn = state.players.player1;
         logger.info("Game started");
+        state.reason = null;
     }
     // 🔥 CRITICAL: send state ONLY to active presences
-    dispatcher.broadcastMessage(2, JSON.stringify({
-        type: "state_update",
-        state: state,
-    }));
     return { state: state };
 }
-function matchLeave(ctx, logger, nk, dispatcher, tick, state) {
+function matchLeave(ctx, logger, nk, dispatcher, tick, state, presences) {
+    presences.forEach(function (presence) {
+        var userId = presence.userId;
+        logger.info("❌ Player left: " + userId);
+        // If game is still ongoing
+        if (state.status === "playing") {
+            var winner = userId === state.players.player1
+                ? state.players.player2
+                : state.players.player1;
+            state.status = "finished";
+            state.winner = winner;
+            state.reason = "disconnect";
+            dispatcher.broadcastMessage(1, JSON.stringify({
+                type: "state_update",
+                state: state,
+            }));
+        }
+    });
     return { state: state };
 }
 // ✅ Controlled loop (NOT spammy, but keeps sync)
 function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
+    if (state.status === "playing" && !state.initialStateSent) {
+        logger.info("📡 Sending initial state to all players");
+        dispatcher.broadcastMessage(1, JSON.stringify({
+            type: "state_update",
+            state: state,
+        }));
+        state.initialStateSent = true;
+    }
     // 🔥 HANDLE PLAYER MOVES HERE
     for (var _i = 0, messages_1 = messages; _i < messages_1.length; _i++) {
         var message = messages_1[_i];
@@ -86,24 +109,54 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
         // ❌ GAME NOT STARTED
         if (state.status !== "playing")
             continue;
+        if (state.status === "playing" && !state.initialStateSent) {
+            logger.info("📡 Sending initial state to all players");
+            dispatcher.broadcastMessage(1, JSON.stringify({
+                type: "state_update",
+                state: state,
+            }));
+            state.initialStateSent = true;
+        }
         // ❌ NOT PLAYER TURN
         if (state.turn !== userId) {
             logger.info("❌ Not your turn");
+            dispatcher.broadcastMessage(2, JSON.stringify({
+                type: "error",
+                message: "Not your turn",
+                userId: userId,
+            }));
             continue;
         }
         var index = data.index;
         // ❌ INVALID MOVE
-        if (index < 0 || index > 8)
+        if (index < 0 || index > 8) {
+            dispatcher.broadcastMessage(2, JSON.stringify({
+                type: "error",
+                message: "Invalid Cell Selection",
+                userId: userId,
+            }));
             continue;
-        if (state.board[index] !== "")
+        }
+        if (state.board[index] !== "") {
+            dispatcher.broadcastMessage(2, JSON.stringify({
+                type: "error",
+                message: "Cell already filled",
+                userId: userId,
+            }));
             continue;
+        }
         var symbol = state.players.player1 === userId ? "X" : "O";
         state.board[index] = symbol;
         // 🏆 WIN CHECK
         var winPatterns = [
-            [0, 1, 2], [3, 4, 5], [6, 7, 8],
-            [0, 3, 6], [1, 4, 7], [2, 5, 8],
-            [0, 4, 8], [2, 4, 6]
+            [0, 1, 2],
+            [3, 4, 5],
+            [6, 7, 8],
+            [0, 3, 6],
+            [1, 4, 7],
+            [2, 5, 8],
+            [0, 4, 8],
+            [2, 4, 6],
         ];
         for (var _b = 0, winPatterns_1 = winPatterns; _b < winPatterns_1.length; _b++) {
             var p = winPatterns_1[_b];
@@ -116,15 +169,27 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
                 logger.info("🏆 Winner: " + userId);
             }
         }
-        // 🔁 SWITCH TURN
         if (!state.winner) {
+            var isBoardFull = state.board.every(function (cell) { return cell !== ""; });
+            if (isBoardFull) {
+                state.status = "finished";
+                logger.info("🤝 Game Draw");
+            }
+        }
+        // 🔁 SWITCH TURN
+        if (!state.winner && state.status !== "finished") {
             state.turn =
                 state.turn === state.players.player1
                     ? state.players.player2
                     : state.players.player1;
         }
         // 📡 BROADCAST UPDATED STATE
-        dispatcher.broadcastMessage(2, JSON.stringify({ type: "state_update", state: state }));
+        if (messages.length > 0) {
+            dispatcher.broadcastMessage(1, JSON.stringify({
+                type: "state_update",
+                state: state,
+            }));
+        }
     }
     return { state: state };
 }

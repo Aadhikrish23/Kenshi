@@ -6,9 +6,9 @@ type State = {
   };
   turn: string | null;
   winner: string | null;
+  reason:string | null;
   status: "waiting" | "playing" | "finished";
-   initialStateSent: boolean,
-  
+  initialStateSent: boolean;
 };
 
 function createInitialState(): State {
@@ -21,7 +21,8 @@ function createInitialState(): State {
     turn: null,
     winner: null,
     status: "waiting",
-     initialStateSent: false,
+    reason:null,
+    initialStateSent: false,
   };
 }
 
@@ -56,7 +57,7 @@ function matchJoinAttempt(
   dispatcher: any,
   tick: number,
   state: State,
-  presence: any
+  presence: any,
 ) {
   return { state, accept: true };
 }
@@ -82,16 +83,11 @@ function matchJoin(ctx, logger, nk, dispatcher, tick, state, presences) {
     state.status = "playing";
     state.turn = state.players.player1;
     logger.info("Game started");
+    state.reason = null;
   }
 
+  
   // 🔥 CRITICAL: send state ONLY to active presences
-  dispatcher.broadcastMessage(
-    2,
-    JSON.stringify({
-      type: "state_update",
-      state: state,
-    })
-  );
 
   return { state };
 }
@@ -102,14 +98,60 @@ function matchLeave(
   nk: any,
   dispatcher: any,
   tick: number,
-  state: State
+  state: State,
+  presences: any,
 ) {
+  presences.forEach((presence) => {
+    const userId = presence.userId;
+
+    logger.info("❌ Player left: " + userId);
+
+    // If game is still ongoing
+    if (state.status === "playing") {
+      const winner =
+        userId === state.players.player1
+          ? state.players.player2
+          : state.players.player1;
+
+      state.status = "finished";
+      state.winner = winner;
+      state.reason = "disconnect";
+
+      dispatcher.broadcastMessage(
+        1,
+        JSON.stringify({
+          type: "state_update",
+          state,
+        }),
+      );
+    }
+  });
   return { state };
 }
 
 // ✅ Controlled loop (NOT spammy, but keeps sync)
-function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
+function matchLoop(
+  ctx: any,
+  logger: any,
+  nk: any,
+  dispatcher: any,
+  tick: any,
+  state: any,
+  messages: any,
+) {
+  if (state.status === "playing" && !state.initialStateSent) {
+    logger.info("📡 Sending initial state to all players");
 
+    dispatcher.broadcastMessage(
+      1,
+      JSON.stringify({
+        type: "state_update",
+        state: state,
+      }),
+    );
+
+    state.initialStateSent = true;
+  }
   // 🔥 HANDLE PLAYER MOVES HERE
   for (const message of messages) {
     logger.info("🔥 MESSAGE RECEIVED 🔥");
@@ -131,18 +173,59 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
 
     // ❌ GAME NOT STARTED
     if (state.status !== "playing") continue;
+    if (state.status === "playing" && !state.initialStateSent) {
+      logger.info("📡 Sending initial state to all players");
+
+      dispatcher.broadcastMessage(
+        1,
+        JSON.stringify({
+          type: "state_update",
+          state: state,
+        }),
+      );
+
+      state.initialStateSent = true;
+    }
 
     // ❌ NOT PLAYER TURN
     if (state.turn !== userId) {
       logger.info("❌ Not your turn");
+      dispatcher.broadcastMessage(
+        2,
+        JSON.stringify({
+          type: "error",
+          message: "Not your turn",
+          userId,
+        }),
+      );
       continue;
     }
 
     const index = data.index;
 
     // ❌ INVALID MOVE
-    if (index < 0 || index > 8) continue;
-    if (state.board[index] !== "") continue;
+    if (index < 0 || index > 8) {
+      dispatcher.broadcastMessage(
+        2,
+        JSON.stringify({
+          type: "error",
+          message: "Invalid Cell Selection",
+          userId,
+        }),
+      );
+      continue;
+    }
+    if (state.board[index] !== "") {
+      dispatcher.broadcastMessage(
+        2,
+        JSON.stringify({
+          type: "error",
+          message: "Cell already filled",
+          userId,
+        }),
+      );
+      continue;
+    }
 
     const symbol = state.players.player1 === userId ? "X" : "O";
 
@@ -150,9 +233,14 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
 
     // 🏆 WIN CHECK
     const winPatterns = [
-      [0,1,2],[3,4,5],[6,7,8],
-      [0,3,6],[1,4,7],[2,5,8],
-      [0,4,8],[2,4,6]
+      [0, 1, 2],
+      [3, 4, 5],
+      [6, 7, 8],
+      [0, 3, 6],
+      [1, 4, 7],
+      [2, 5, 8],
+      [0, 4, 8],
+      [2, 4, 6],
     ];
 
     for (let p of winPatterns) {
@@ -168,9 +256,16 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
         logger.info("🏆 Winner: " + userId);
       }
     }
-
-    // 🔁 SWITCH TURN
     if (!state.winner) {
+      const isBoardFull = state.board.every((cell) => cell !== "");
+
+      if (isBoardFull) {
+        state.status = "finished";
+        logger.info("🤝 Game Draw");
+      }
+    }
+    // 🔁 SWITCH TURN
+    if (!state.winner && state.status !== "finished") {
       state.turn =
         state.turn === state.players.player1
           ? state.players.player2
@@ -178,10 +273,15 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
     }
 
     // 📡 BROADCAST UPDATED STATE
-    dispatcher.broadcastMessage(
-      2,
-      JSON.stringify({ type: "state_update", state })
-    );
+    if (messages.length > 0) {
+      dispatcher.broadcastMessage(
+        1,
+        JSON.stringify({
+          type: "state_update",
+          state: state,
+        }),
+      );
+    }
   }
 
   return { state };
@@ -193,7 +293,7 @@ function matchTerminate(
   nk: any,
   dispatcher: any,
   tick: number,
-  state: State
+  state: State,
 ) {
   return { state };
 }
@@ -205,12 +305,10 @@ function matchSignal(
   dispatcher: any,
   tick: number,
   state: State,
-  data: string
+  data: string,
 ) {
   return { state, data };
 }
-
-
 
 function createMatchRpc(ctx: any, logger: any, nk: any, payload: string) {
   const matchId = nk.matchCreate("tic-tac-toe", {});
@@ -223,14 +321,14 @@ function InitModule(ctx: any, logger: any, nk: any, initializer: any) {
   logger.info("🔥 INIT MODULE CALLED 🔥");
 
   initializer.registerMatch("tic-tac-toe", {
-  matchInit: matchInit,
-  matchJoinAttempt: matchJoinAttempt,
-  matchJoin: matchJoin,
-  matchLeave: matchLeave,
-  matchLoop: matchLoop,
-  matchTerminate: matchTerminate,
-  matchSignal: matchSignal,
-});
+    matchInit: matchInit,
+    matchJoinAttempt: matchJoinAttempt,
+    matchJoin: matchJoin,
+    matchLeave: matchLeave,
+    matchLoop: matchLoop,
+    matchTerminate: matchTerminate,
+    matchSignal: matchSignal,
+  });
 
   initializer.registerRpc("create_match", createMatchRpc);
 }
