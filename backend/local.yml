@@ -1,0 +1,9 @@
+database:
+  address:
+  - "kenshi_db_user:IRPwa3zTB9AIlKF5GzzjJQ4vcQ79r0uf@dpg-d70cvglm5p6s73aqdqs0-a:5432/kenshi_db"
+
+socket:
+  server_key: "kenshi_key"
+
+session:
+  encryption_key: "kenshi_super_secret_123"

@@ -5,7 +5,7 @@ export default function GameBoard({ socket, matchId, userId }: any) {
 
   if (!gameState) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-zinc-900 to-black text-white flex flex-col items-center justify-center space-y-6">
+    <div className="min-h-screen bg-linear-to-br from-black via-zinc-900 to-black text-white flex flex-col items-center justify-center space-y-6">
 
       {/* Spinner */}
       <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
@@ -57,7 +57,7 @@ export default function GameBoard({ socket, matchId, userId }: any) {
       ? gameState.players.player2
       : gameState.players.player1;
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-zinc-900 to-black text-white flex flex-col items-center justify-center space-y-6">
+    <div className="min-h-screen bg-linear-to-br from-black via-zinc-900 to-black text-white flex flex-col items-center justify-center space-y-6">
       {/* Status */}
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-bold">
