@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import {  useState } from "react";
 import GameBoard from "./GameBoard";
 import { createMatch, joinMatch } from "../services/nakama/match";
 import { connectToNakama } from "../services/nakama/socket";
