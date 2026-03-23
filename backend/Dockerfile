@@ -5,4 +5,4 @@ COPY nakama /nakama/data/modules
 
 ENTRYPOINT ["/nakama/nakama"]
 
-CMD ["migrate", "up", "--config", "/nakama/data/local.yml"]
+CMD ["--config", "/nakama/data/local.yml", "--logger.level", "DEBUG"]
