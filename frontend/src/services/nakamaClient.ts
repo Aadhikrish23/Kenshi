@@ -18,8 +18,12 @@ function getDeviceId(): string {
  * CONNECT TO NAKAMA
  */
 export async function connectToNakama() {
-  const client = new Client("defaultkey", "127.0.0.1", "7350", false);
-
+  const client = new Client(
+    "kenshi_key",
+    "kenshi.onrender.com",
+    "443",
+    true, // ✅ IMPORTANT (HTTPS)
+  );
   // ✅ IMPORTANT: isolate session per tab
 
   const deviceId = getDeviceId();
@@ -29,12 +33,12 @@ export async function connectToNakama() {
   const session: Session = await client.authenticateDevice(
     deviceId,
     undefined,
-     // create if not exists
+    // create if not exists
   );
 
   console.log("✅ Connected as user:", session.user_id);
 
-  const socket: Socket = client.createSocket();
+  const socket: Socket = client.createSocket(true,true);
 
   await socket.connect(session, true);
 
@@ -78,15 +82,11 @@ export async function joinMatch(socket: Socket, matchId: string) {
 /**
  * SEND MOVE (you'll need this next)
  */
-export async function sendMove(
-  socket: Socket,
-  matchId: string,
-  index: number
-) {
-await socket.sendMatchState(
-  matchId,
-  1,
-  new TextEncoder().encode(JSON.stringify({ index }))
-);
+export async function sendMove(socket: Socket, matchId: string, index: number) {
+  await socket.sendMatchState(
+    matchId,
+    1,
+    new TextEncoder().encode(JSON.stringify({ index })),
+  );
   console.log("📤 Move sent:", index);
 }
