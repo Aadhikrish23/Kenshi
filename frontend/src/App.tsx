@@ -1,9 +1,7 @@
-import "./App.css";
-import Lobby from "./components/pages/Lobby";
+import AppRoutes from "./routes/AppRoutes";
+
 function App() {
-  return (<div>
-    <Lobby/>
-  </div>);
+  return <AppRoutes />;
 }
 
 export default App;
