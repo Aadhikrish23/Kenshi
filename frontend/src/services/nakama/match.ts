@@ -1,23 +1,19 @@
 import { connectToNakama } from "./socket";
 
 /**
- * Create match
+ * Create match (guest allowed)
  */
 export async function createMatch() {
-  const res = await connectToNakama();
-  const socket = res.socket;
+  const socket = await connectToNakama();
 
-  const response = await socket.rpc("create_match", "");
-  return JSON.parse(response.payload);
+  const res = await socket.rpc("create_match", "");
+  return JSON.parse(res.payload);
 }
 
 /**
  * Join match
  */
 export async function joinMatch(matchId: string) {
-  const res = await connectToNakama();
-  const socket = res.socket;
-
-  const match = await socket.joinMatch(matchId);
-  return match;
+  const socket = await connectToNakama();
+  return await socket.joinMatch(matchId);
 }

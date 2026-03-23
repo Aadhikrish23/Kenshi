@@ -1,26 +1,24 @@
 import { client } from "./client";
-import { authenticate } from "./auth";
+import { getSession } from "./auth";
 
 let socket: any = null;
-let userId: string | null = null;
 
 /**
- * Create or reuse socket
+ * Connect socket ONLY if session exists
  */
 export async function connectToNakama() {
-  // ✅ Always return same structure
-  if (socket && userId) {
-    return { socket, userId };
-  }
+  if (socket) return socket;
 
-  const { session, userId: uid } = await authenticate();
+  const session = getSession();
+
+  if (!session) {
+    throw new Error("User not authenticated");
+  }
 
   socket = client.createSocket(true, true);
   await socket.connect(session, true);
 
-  userId = uid!;
-
   console.log("🔌 Socket connected");
 
-  return { socket, userId };
+  return socket;
 }

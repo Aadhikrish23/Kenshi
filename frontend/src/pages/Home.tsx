@@ -1,15 +1,47 @@
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { getSession, login, logout } from "../services/nakama/auth";
 
 export default function Home() {
   const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const session = getSession();
+    if (session && typeof session === "string") {
+      setUser(session);
+    }
+  }, []);
+
+  const handleLogin = async () => {
+    console.log("👉 Login button clicked");
+
+    try {
+      const session = await login();
+      console.log("🎉 Session received:", session);
+      if (session && typeof session === "string") {
+        setUser(session);
+      }
+    } catch (err) {
+      console.error("❌ Login failed:", err);
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    setUser(null);
+  };
 
   return (
     <div className="min-h-screen bg-linear-to-br from-black via-zinc-900 to-black text-white flex items-center justify-center">
-      
+      {!user ? (
+        <button onClick={handleLogin}>Login</button>
+      ) : (
+        <button onClick={handleLogout}>Logout</button>
+      )}
       <div className="w-full max-w-4xl px-4">
-
         {/* Title */}
         <h1 className="text-5xl font-bold text-center mb-10 tracking-wide">
           Kenshi
@@ -17,7 +49,6 @@ export default function Home() {
 
         {/* Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
           <Card>
             <h2 className="text-xl font-semibold mb-4">Private Match</h2>
             <Button onClick={() => navigate("/lobby")}>
@@ -27,20 +58,38 @@ export default function Home() {
 
           <Card>
             <h2 className="text-xl font-semibold mb-4">Play Online</h2>
-            <Button onClick={() => navigate("/matchmaking")}>
+            <Button
+              onClick={() => {
+                const session = getSession();
+
+                if (!session) {
+                  alert("Login required");
+                  return;
+                }
+                navigate("/matchmaking");
+              }}
+            >
               Auto Matchmaking
             </Button>
           </Card>
 
           <Card>
             <h2 className="text-xl font-semibold mb-4">Leaderboard</h2>
-            <Button onClick={() => navigate("/leaderboard")}>
+            <Button
+              onClick={() => {
+                const session = getSession();
+
+                if (!session) {
+                  alert("Login required");
+                  return;
+                }
+                navigate("/leaderboard");
+              }}
+            >
               View Rankings
             </Button>
           </Card>
-
         </div>
-
       </div>
     </div>
   );

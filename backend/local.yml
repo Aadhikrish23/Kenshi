@@ -1,12 +1,12 @@
 database:
   address:
-  - "kenshi_db_user:IRPwa3zTB9AIlKF5GzzjJQ4vcQ79r0uf@dpg-d70cvglm5p6s73aqdqs0-a:5432/kenshi_db"
+  - "${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
 
 socket:
-  server_key: "kenshi_key"
+  server_key: "${NAKAMA_SERVER_KEY}"
 
 session:
-  encryption_key: "kenshi_super_secret_123"
+  encryption_key: "${NAKAMA_SESSION_KEY}"
 
 runtime:
   js_entrypoint: "match.js"
