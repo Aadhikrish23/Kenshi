@@ -1,48 +1,64 @@
+import { useEffect, useRef } from "react";
 import { useGame } from "../hooks/useGame";
 
 export default function GameBoard({ socket, matchId, userId }: any) {
   const { gameState, makeMove, error } = useGame(socket, matchId);
+  const unloadRef = useRef<any>(null);
 
+  /**
+   * 🚨 Warn user before refresh
+   */
+  useEffect(() => {
+    unloadRef.current = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", unloadRef.current);
+
+    return () => {
+      window.removeEventListener("beforeunload", unloadRef.current);
+    };
+  }, []);
+  
+
+   
   if (!gameState) {
-  return (
-    <div className="min-h-screen bg-linear-to-br from-black via-zinc-900 to-black text-white flex flex-col items-center justify-center space-y-6">
+    return (
+      <div className="min-h-screen bg-linear-to-br from-black via-zinc-900 to-black text-white flex flex-col items-center justify-center space-y-6">
+        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
 
-      {/* Spinner */}
-      <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <h2 className="text-xl font-semibold text-zinc-300 animate-pulse">
+          Waiting for opponent...
+        </h2>
 
-      {/* Title */}
-      <h2 className="text-xl font-semibold text-zinc-300 animate-pulse">
-        Waiting for opponent...
-      </h2>
+        <div className="text-center space-y-2">
+          <p className="text-sm text-zinc-500">
+            Share your match ID or wait for someone to join
+          </p>
 
-      {/* Info */}
-      <div className="text-center space-y-2">
-        <p className="text-sm text-zinc-500">
-          Share your match ID or wait for someone to join
-        </p>
+          <p className="text-sm text-zinc-400">
+            Match ID:{" "}
+            <span className="text-white font-medium">{matchId}</span>
+          </p>
+        </div>
 
-        <p className="text-sm text-zinc-400">
-          Match ID: <span className="text-white font-medium">{matchId}</span>
-        </p>
+        <button
+          onClick={() => navigator.clipboard.writeText(matchId)}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all rounded-lg text-sm font-medium shadow-md"
+        >
+          Copy Match ID
+        </button>
       </div>
+    );
+  }
 
-      {/* Copy Button */}
-      <button
-        onClick={() => navigator.clipboard.writeText(matchId)}
-        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all rounded-lg text-sm font-medium shadow-md"
-      >
-        Copy Match ID
-      </button>
-
-    </div>
-  );
-}
-
-  // ✅ Core conditions
+  /**
+   * 🎮 Game Logic
+   */
   const isMyTurn = gameState.turn === userId;
   const isGameActive = gameState.status === "playing";
 
-  // ✅ Safe click handler
   const handleClick = (index: number) => {
     if (!isGameActive) return;
     if (!isMyTurn) return;
@@ -50,22 +66,29 @@ export default function GameBoard({ socket, matchId, userId }: any) {
 
     makeMove(index);
   };
-  const mySymbol = gameState.players.player1 === userId ? "X" : "O";
 
-  // const opponentId =
-  //   gameState.players.player1 === userId
-  //     ? gameState.players.player2
-  //     : gameState.players.player1;
+  const mySymbol =
+    gameState.players.player1 === userId ? "X" : "O";
+
+  /**
+   * 🎯 UI
+   */
   return (
     <div className="min-h-screen bg-linear-to-br from-black via-zinc-900 to-black text-white flex flex-col items-center justify-center space-y-6">
+      
+      {/* ⚠️ Warning */}
+      <div className="bg-yellow-500/10 border border-yellow-500 text-yellow-300 px-4 py-2 rounded-lg text-sm">
+        ⚠️ Do not refresh during a match
+      </div>
+
       {/* Status */}
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-bold">
           {gameState.status === "finished"
             ? "Game Over"
             : isMyTurn
-              ? "Your Turn"
-              : "Opponent's Turn"}
+            ? "Your Turn"
+            : "Opponent's Turn"}
         </h2>
 
         <p className="text-zinc-400">You are: {mySymbol}</p>
@@ -81,7 +104,9 @@ export default function GameBoard({ socket, matchId, userId }: any) {
         )}
 
         {gameState.reason === "disconnect" && (
-          <p className="text-red-400">Opponent disconnected</p>
+          <p className="text-red-400">
+            Opponent disconnected
+          </p>
         )}
       </div>
 
@@ -92,16 +117,20 @@ export default function GameBoard({ socket, matchId, userId }: any) {
             key={i}
             onClick={() => handleClick(i)}
             className="
-            w-24 h-24 
-            flex items-center justify-center 
-            text-3xl font-bold 
-            rounded-xl 
-            bg-black/40 
-            hover:bg-blue-600/30 
-            transition
-          "
+              w-24 h-24 
+              flex items-center justify-center 
+              text-3xl font-bold 
+              rounded-xl 
+              bg-black/40 
+              hover:bg-blue-600/30 
+              transition
+            "
           >
-            {cell === "X" ? "❌" : cell === "O" ? "⭕" : ""}
+            {cell === "X"
+              ? "❌"
+              : cell === "O"
+              ? "⭕"
+              : ""}
           </button>
         ))}
       </div>
