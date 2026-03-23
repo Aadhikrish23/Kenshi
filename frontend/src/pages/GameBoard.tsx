@@ -52,10 +52,10 @@ export default function GameBoard({ socket, matchId, userId }: any) {
   };
   const mySymbol = gameState.players.player1 === userId ? "X" : "O";
 
-  const opponentId =
-    gameState.players.player1 === userId
-      ? gameState.players.player2
-      : gameState.players.player1;
+  // const opponentId =
+  //   gameState.players.player1 === userId
+  //     ? gameState.players.player2
+  //     : gameState.players.player1;
   return (
     <div className="min-h-screen bg-linear-to-br from-black via-zinc-900 to-black text-white flex flex-col items-center justify-center space-y-6">
       {/* Status */}

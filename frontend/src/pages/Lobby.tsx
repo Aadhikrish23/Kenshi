@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { connectToNakama, createMatch, joinMatch } from "../services/nakamaClient";
 import GameBoard from "./GameBoard";
 
@@ -9,7 +9,7 @@ export default function Lobby() {
   const [userId, setUserId] = useState("");
   const [inGame, setInGame] = useState(false);
 
-  const hasConnected = useRef(false);
+  // const hasConnected = useRef(false);
 
 
 async function handleCreate() {
@@ -45,7 +45,7 @@ async function handleJoin() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-zinc-900 to-black text-white flex items-center justify-center">
+    <div className="min-h-screen bg-linear-to-br from-black via-zinc-900 to-black text-white flex items-center justify-center">
     <div className="w-full max-w-md space-y-6">
 
       <h1 className="text-3xl font-bold text-center">Private Lobby</h1>
