@@ -6,4 +6,4 @@ COPY backend/local.yml /nakama/data/
 # Copy game logic (CRITICAL)
 COPY nakama /nakama/data/modules
 
-CMD ["nakama", "--config", "/nakama/data/local.yml", "--logger.level", "DEBUG"]
+CMD ["/nakama/nakama", "--config", "/nakama/data/local.yml", "--logger.level", "DEBUG"]
