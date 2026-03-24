@@ -27,8 +27,11 @@ export default function Lobby() {
       setInGame(true);
 
       console.log("🆕 Host ready:", match.match_id);
-    } catch (err) {
-      console.error("❌ Create failed:", err);
+    } catch (err:any) {
+      console.error("❌ Create failed:", {
+         code: err.code,
+        message: err.message,
+      });
     }
   }
 
@@ -46,20 +49,17 @@ export default function Lobby() {
       setInGame(true);
 
       console.log("👥 Joined match:", match.match_id);
-    } catch (err) {
-      console.error("❌ Join failed:", err);
+    } catch (err : any) {
+      console.error("❌ Join failed:", {
+        code: err.code,
+        message: err.message,
+      });
     }
   }
 
   // 🎮 ENTER GAME
   if (inGame) {
-    return (
-      <GameBoard
-        socket={socket}
-        matchId={matchId}
-        userId={userId}
-      />
-    );
+    return <GameBoard socket={socket} matchId={matchId} userId={userId} />;
   }
 
   // 🧭 LOBBY UI
