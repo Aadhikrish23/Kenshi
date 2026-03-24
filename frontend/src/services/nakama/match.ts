@@ -1,19 +1,34 @@
 import { connectToNakama } from "./socket";
 
 /**
- * Create match (guest allowed)
+ * ✅ CREATE + JOIN MATCH (HOST FLOW)
  */
 export async function createMatch() {
   const socket = await connectToNakama();
 
+  // 1. Create match
   const res = await socket.rpc("create_match", "");
-  return JSON.parse(res.payload);
+  const { matchId } = JSON.parse(res.payload);
+
+  console.log("🆕 Match created:", matchId);
+
+  // 2. 🔥 CRITICAL: JOIN immediately
+  const match = await socket.joinMatch(matchId);
+
+  console.log("✅ Host joined match:", match.match_id);
+
+  return { match, socket };
 }
 
 /**
- * Join match
+ * ✅ JOIN MATCH (PLAYER 2)
  */
 export async function joinMatch(matchId: string) {
   const socket = await connectToNakama();
-  return await socket.joinMatch(matchId);
+
+  const match = await socket.joinMatch(matchId);
+
+  console.log("✅ Joined match:", match.match_id);
+
+  return { match, socket };
 }

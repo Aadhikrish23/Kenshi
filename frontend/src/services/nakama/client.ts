@@ -6,3 +6,4 @@ export const client = new Client(
   import.meta.env.VITE_NAKAMA_PORT,
   import.meta.env.VITE_NAKAMA_SSL === "true"
 );
+console.log("ENV SSL:", import.meta.env.VITE_NAKAMA_SSL);

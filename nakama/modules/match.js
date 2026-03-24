@@ -1,30 +1,23 @@
 function createInitialState() {
     return {
         board: ["", "", "", "", "", "", "", "", ""],
-        players: {
-            player1: null,
-            player2: null,
-        },
+        players: { player1: null, player2: null },
         turn: null,
         winner: null,
-        status: "waiting",
         reason: null,
-        initialStateSent: false,
+        status: "waiting",
     };
 }
-// 🔥 BROADCAST
 function broadcastState(dispatcher, state) {
-    var payload = JSON.stringify({
+    dispatcher.broadcastMessage(1, JSON.stringify({
         type: "state_update",
         state: state,
-    });
-    dispatcher.broadcastMessage(2, payload); // OP_STATE
+    }), null // ✅ THIS IS CORRECT IN JS RUNTIME
+    );
 }
 // =====================
-// MATCH FUNCTIONS
-// =====================
 function matchInit(ctx, logger, nk, params) {
-    logger.info("🚀 MATCH INIT CALLED 🚀");
+    logger.error("🚀 MATCH INIT");
     return {
         state: createInitialState(),
         tickRate: 10,
@@ -35,35 +28,23 @@ function matchJoinAttempt(ctx, logger, nk, dispatcher, tick, state, presence) {
     return { state: state, accept: true };
 }
 function matchJoin(ctx, logger, nk, dispatcher, tick, state, presences) {
-    logger.info("DEBUG PRESENCES: " + JSON.stringify(presences));
-    // ⚠️ IMPORTANT: do NOT assume only 1 presence
-    for (var _i = 0, presences_1 = presences; _i < presences_1.length; _i++) {
-        var p = presences_1[_i];
-        var userId = p.userId;
+    presences.forEach(function (p) {
         if (!state.players.player1) {
-            state.players.player1 = userId;
-            logger.info("Player 1 joined: " + userId);
+            state.players.player1 = p.userId;
+            logger.error("Player1 joined: " + p.userId);
         }
-        else if (!state.players.player2 && userId !== state.players.player1) {
-            state.players.player2 = userId;
-            logger.info("Player 2 joined: " + userId);
+        else if (!state.players.player2) {
+            state.players.player2 = p.userId;
+            logger.error("Player2 joined: " + p.userId);
         }
-    }
-    // ✅ START GAME ONLY WHEN BOTH PRESENT
-    if (state.players.player1 && state.players.player2) {
-        state.status = "playing";
-        state.turn = state.players.player1;
-        logger.info("Game started");
-        state.reason = null;
-    }
-    // 🔥 CRITICAL: send state ONLY to active presences
+    });
+    broadcastState(dispatcher, state);
     return { state: state };
 }
 function matchLeave(ctx, logger, nk, dispatcher, tick, state, presences) {
-    presences.forEach(function (presence) {
-        var userId = presence.userId;
-        logger.info("❌ Player left: " + userId);
-        // If game is still ongoing
+    presences.forEach(function (p) {
+        var userId = p.userId;
+        logger.error("❌ Player left: " + userId);
         if (state.status === "playing") {
             var winner = userId === state.players.player1
                 ? state.players.player2
@@ -71,125 +52,69 @@ function matchLeave(ctx, logger, nk, dispatcher, tick, state, presences) {
             state.status = "finished";
             state.winner = winner;
             state.reason = "disconnect";
-            dispatcher.broadcastMessage(1, JSON.stringify({
-                type: "state_update",
-                state: state,
-            }));
+            broadcastState(dispatcher, state);
         }
     });
     return { state: state };
 }
-// ✅ Controlled loop (NOT spammy, but keeps sync)
 function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
-    if (state.status === "playing" && !state.initialStateSent) {
-        logger.info("📡 Sending initial state to all players");
-        dispatcher.broadcastMessage(1, JSON.stringify({
-            type: "state_update",
-            state: state,
-        }));
-        state.initialStateSent = true;
+    var stateChanged = false;
+    // 🎮 Start game
+    if (state.players.player1 &&
+        state.players.player2 &&
+        state.status === "waiting") {
+        state.status = "playing";
+        state.turn = state.players.player1;
+        stateChanged = true;
+        logger.error("🎮 GAME STARTED");
     }
-    // 🔥 HANDLE PLAYER MOVES HERE
+    // 🎯 Moves
     for (var _i = 0, messages_1 = messages; _i < messages_1.length; _i++) {
-        var message = messages_1[_i];
-        logger.info("🔥 MESSAGE RECEIVED 🔥");
-        logger.info("opCode: " + message.opCode);
-        if (message.opCode !== 1)
+        var msg = messages_1[_i];
+        if (msg.opCode !== 1)
             continue;
-        var userId = message.sender.userId;
-        var data = void 0;
-        try {
-            data = JSON.parse(nk.binaryToString(message.data));
-        }
-        catch (_a) {
-            logger.info("❌ Invalid data");
-            continue;
-        }
-        logger.info("Move from: " + userId + " index: " + data.index);
-        // ❌ GAME NOT STARTED
+        var userId = msg.sender.userId;
+        var data = JSON.parse(nk.binaryToString(msg.data));
+        var index = data.index;
         if (state.status !== "playing")
             continue;
-        if (state.status === "playing" && !state.initialStateSent) {
-            logger.info("📡 Sending initial state to all players");
-            dispatcher.broadcastMessage(1, JSON.stringify({
-                type: "state_update",
-                state: state,
-            }));
-            state.initialStateSent = true;
-        }
-        // ❌ NOT PLAYER TURN
-        if (state.turn !== userId) {
-            logger.info("❌ Not your turn");
-            dispatcher.broadcastMessage(2, JSON.stringify({
-                type: "error",
-                message: "Not your turn",
-                userId: userId,
-            }));
+        if (state.turn !== userId)
             continue;
-        }
-        var index = data.index;
-        // ❌ INVALID MOVE
-        if (index < 0 || index > 8) {
-            dispatcher.broadcastMessage(2, JSON.stringify({
-                type: "error",
-                message: "Invalid Cell Selection",
-                userId: userId,
-            }));
+        if (state.board[index] !== "")
             continue;
-        }
-        if (state.board[index] !== "") {
-            dispatcher.broadcastMessage(2, JSON.stringify({
-                type: "error",
-                message: "Cell already filled",
-                userId: userId,
-            }));
-            continue;
-        }
         var symbol = state.players.player1 === userId ? "X" : "O";
         state.board[index] = symbol;
-        // 🏆 WIN CHECK
+        stateChanged = true;
+        // ✅ WIN CHECK
         var winPatterns = [
-            [0, 1, 2],
-            [3, 4, 5],
-            [6, 7, 8],
-            [0, 3, 6],
-            [1, 4, 7],
-            [2, 5, 8],
-            [0, 4, 8],
-            [2, 4, 6],
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6],
         ];
-        for (var _b = 0, winPatterns_1 = winPatterns; _b < winPatterns_1.length; _b++) {
-            var p = winPatterns_1[_b];
-            var a = p[0], b = p[1], c = p[2];
+        for (var _a = 0, winPatterns_1 = winPatterns; _a < winPatterns_1.length; _a++) {
+            var _b = winPatterns_1[_a], a = _b[0], b = _b[1], c = _b[2];
             if (state.board[a] &&
                 state.board[a] === state.board[b] &&
                 state.board[a] === state.board[c]) {
                 state.winner = userId;
                 state.status = "finished";
-                logger.info("🏆 Winner: " + userId);
             }
         }
-        if (!state.winner) {
-            var isBoardFull = state.board.every(function (cell) { return cell !== ""; });
-            if (isBoardFull) {
-                state.status = "finished";
-                logger.info("🤝 Game Draw");
-            }
+        // draw
+        if (!state.winner && state.board.every(function (c) { return c !== ""; })) {
+            state.status = "finished";
         }
-        // 🔁 SWITCH TURN
-        if (!state.winner && state.status !== "finished") {
+        // switch turn
+        if (state.status === "playing") {
             state.turn =
                 state.turn === state.players.player1
                     ? state.players.player2
                     : state.players.player1;
         }
-        // 📡 BROADCAST UPDATED STATE
-        if (messages.length > 0) {
-            dispatcher.broadcastMessage(1, JSON.stringify({
-                type: "state_update",
-                state: state,
-            }));
-        }
+    }
+    // ✅ Broadcast only if changed
+    if (stateChanged) {
+        broadcastState(dispatcher, state);
     }
     return { state: state };
 }
@@ -199,13 +124,15 @@ function matchTerminate(ctx, logger, nk, dispatcher, tick, state) {
 function matchSignal(ctx, logger, nk, dispatcher, tick, state, data) {
     return { state: state, data: data };
 }
+function matchmakerMatched(ctx, logger, nk, entries) {
+    return nk.matchCreate("tic-tac-toe", {});
+}
 function createMatchRpc(ctx, logger, nk, payload) {
     var matchId = nk.matchCreate("tic-tac-toe", {});
-    logger.info("MATCH CREATED: " + matchId);
+    logger.error("MATCH CREATED: " + matchId);
     return JSON.stringify({ matchId: matchId });
 }
 function InitModule(ctx, logger, nk, initializer) {
-    logger.info("🔥 INIT MODULE CALLED 🔥");
     initializer.registerMatch("tic-tac-toe", {
         matchInit: matchInit,
         matchJoinAttempt: matchJoinAttempt,
@@ -215,5 +142,6 @@ function InitModule(ctx, logger, nk, initializer) {
         matchTerminate: matchTerminate,
         matchSignal: matchSignal,
     });
+    initializer.registerMatchmakerMatched(matchmakerMatched);
     initializer.registerRpc("create_match", createMatchRpc);
 }

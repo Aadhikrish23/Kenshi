@@ -2,42 +2,74 @@ import { useEffect, useState } from "react";
 
 export function useGame(socket: any, matchId: string) {
   const [gameState, setGameState] = useState<any>(null);
-  const [error, setError] = useState<String | null>("");
+  const [error, setError] = useState<string | null>(null);
+  const [isReady, setIsReady] = useState(false); // ✅ NEW
 
-  useEffect(() => {
-    if (!socket) return;
-
-    console.log("🎯 Listening for match:", matchId);
-    setError(null);
-
-    socket.onmatchdata = (msg: any) => {
-      const decoded = JSON.parse(new TextDecoder().decode(msg.data));
-
-      if (msg.op_code === 1) {
-    console.log("📦 STATE UPDATE:", decoded.state);
-    setGameState({ ...decoded.state });
+useEffect(() => {
+  if (!socket || !matchId) {
+    setIsReady(false);
     return;
   }
 
-  if (msg.op_code === 2) {
-    console.log("❌ ERROR:", decoded.message);
-    setError(decoded.message);
-    return;
-  }
-    };
-  }, [socket, matchId]);
+  console.log("🎯 Binding match listener for:", matchId);
 
-  const makeMove = (index: number) => {
-    if (!socket || !matchId) return;
+  // ✅ FIX: The match is joined, we are ready to send moves immediately
+  setIsReady(true); 
 
-    console.log("📤 Sending move:", index);
+  const handleMatchData = (msg: any) => {
+    try {
+      // Nakama returns data as Uint8Array
+      const decoded = new TextDecoder().decode(msg.data);
+      const data = JSON.parse(decoded);
 
-    socket.sendMatchState(
-      matchId,
-      1,
-      new TextEncoder().encode(JSON.stringify({ index })), // ✅ FIXED
-    );
+      // Log this to see what the server is actually sending back
+      console.log("📥 Received match data:", data);
+
+      if (data.type === "state_update") {
+        setGameState(data.state);
+      }
+    } catch (err) {
+      console.error("❌ Parse error:", err);
+      setError("Invalid game data");
+    }
   };
 
-  return { gameState, makeMove, error };
+  socket.onmatchdata = handleMatchData;
+
+  return () => {
+    socket.onmatchdata = null;
+    setIsReady(false);
+  };
+}, [socket, matchId]);
+
+
+ const makeMove = async (index: number) => {
+  // Check socket exists; remove isReady if you haven't moved it to the useEffect
+  if (!socket || !matchId) {
+    console.warn("🔌 Socket or MatchID missing");
+    return;
+  }
+
+  try {
+    const opCode = 1; // Ensure this matches your Nakama server's OpCode for moves
+    const data = JSON.stringify({ index });
+    
+    console.log("📤 Sending move:", data, "to match:", matchId);
+
+    await socket.sendMatchState(
+      matchId,
+      opCode,
+      data
+    );
+    
+    // Optional: Log success to verify the promise resolved
+    console.log("✅ Move sent successfully");
+  } catch (err) {
+    console.error("❌ Move failed at socket level:", err);
+    setError("Move failed");
+  }
+};
+
+
+  return { gameState, makeMove, error, isReady };
 }

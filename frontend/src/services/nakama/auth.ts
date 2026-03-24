@@ -7,11 +7,11 @@ const SESSION_KEY = "nakama_session";
  * Persist device ID
  */
 function getDeviceId(): string {
-  let deviceId = localStorage.getItem("deviceId");
+  let deviceId = sessionStorage.getItem("deviceId");
 
   if (!deviceId) {
     deviceId = crypto.randomUUID();
-    localStorage.setItem("deviceId", deviceId);
+    sessionStorage.setItem("deviceId", deviceId);
   }
 
   return deviceId;
@@ -30,7 +30,7 @@ export async function login() {
 
   console.log("✅ Logged in:", session);
 
-  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
 
   return session;
 }
@@ -39,7 +39,7 @@ export async function login() {
  * Get stored session
  */
 export function getSession(): Session | null {
-  const data = localStorage.getItem(SESSION_KEY);
+  const data = sessionStorage.getItem(SESSION_KEY);
   if (!data) return null;
 
   return JSON.parse(data);
@@ -49,5 +49,5 @@ export function getSession(): Session | null {
  * Logout
  */
 export function logout() {
-  localStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem(SESSION_KEY);
 }

@@ -3,6 +3,7 @@ import Home from "../pages/Home";
 import Lobby from "../pages/Lobby";
 import Matchmaking from "../pages/Matchmaking";
 import Leaderboard from "../pages/Leaderboard";
+import Game from "../pages/Game";
 
 export default function AppRoutes() {
   return (
@@ -12,6 +13,7 @@ export default function AppRoutes() {
         <Route path="/lobby" element={<Lobby />} />
         <Route path="/matchmaking" element={<Matchmaking />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
+        <Route path="/game" element={<Game />} />
       </Routes>
     </BrowserRouter>
   );
