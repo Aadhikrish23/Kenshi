@@ -2,8 +2,6 @@ name: "nakama1"
 
 session:
   encryption_key: "your_prod_secret"
-  token_expiry_sec: 7200 # 2 hours (was 60 seconds default!)
-  refresh_token_expiry_sec: 3600 # keep this too
 
 runtime:
   http_key: "kenshi_key"
