@@ -15,6 +15,7 @@ runtime:
 socket:
   port: 7350
   address: "0.0.0.0"
+  server_key: "kenshi_key"
 
 cors:
   allow_origins:
