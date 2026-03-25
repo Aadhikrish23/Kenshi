@@ -5,13 +5,8 @@ let socket: any = null;
 let socketPromise: Promise<any> | null = null;
 
 export async function connectToNakama() {
-  if (socket) {
-    return socket;
-  }
-
-  if (socketPromise) {
-    return socketPromise;
-  }
+  if (socket) return socket;
+  if (socketPromise) return socketPromise;
 
   socketPromise = new Promise(async (resolve, reject) => {
     try {
@@ -22,7 +17,9 @@ export async function connectToNakama() {
         session = await login();
       }
 
-      const useSSL = import.meta.env.VITE_NAKAMA_SSL === "true";
+      // ❌ DO NOT depend on env anymore
+      const useSSL = false;
+
       const newSocket = client.createSocket(useSSL);
 
       console.log("🔌 Connecting socket...");
@@ -32,7 +29,6 @@ export async function connectToNakama() {
 
       console.log("✅ Socket connected");
 
-      // 🔥 IMPORTANT: listen for close/errors
       newSocket.ondisconnect = (evt: any) => {
         console.log("❌ Socket disconnected:", evt);
         socket = null;
