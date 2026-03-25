@@ -1,8 +1,7 @@
 name: "nakama1"
 
 database:
-  address: "postgresql://postgres:yqyXqLPdXPGOWjvICVvXmvXsvMHxXQzR@postgres.railway.internal:5432/railway"
-
+  address: "postgres://postgres:yqyXqLPdXPGOWjvICVvXmvXsvMHxXQzR@crossover.proxy.rlwy.net:47091/railway"
 session:
   encryption_key: "your_prod_secret"
 
