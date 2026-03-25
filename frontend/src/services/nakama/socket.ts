@@ -5,38 +5,37 @@ let socket: any = null;
 let socketPromise: Promise<any> | null = null;
 
 export async function connectToNakama() {
-  if (socket) return socket;
-  if (socketPromise) return socketPromise;
+  if (socket && socket.isConnected) {
+    return socket;
+  }
+
+  if (socketPromise) {
+    return socketPromise;
+  }
 
   socketPromise = new Promise(async (resolve, reject) => {
     try {
       let session = getSession();
 
+      // ✅ AUTO LOGIN (no UI interruption)
       if (!session) {
         console.log("⚡ No session → auto login");
         session = await login();
       }
 
       const newSocket = client.createSocket(true);
-
-      console.log("🔌 Connecting socket...");
-      console.log("SESSION:", session);
-
       await newSocket.connect(session, true);
 
-      console.log("✅ Socket connected");
+      console.log("🔌 Socket connected");
 
-      newSocket.ondisconnect = (evt: any) => {
-        console.log("❌ Socket disconnected:", evt);
-        socket = null;
-        socketPromise = null;
-      };
+      // ⚠️ DO NOT OVERRIDE LATER
+      newSocket.onmatchdata = () => {};
+      newSocket.onmatchmakermatched = () => {};
 
       socket = newSocket;
-      resolve(socket);
 
+      resolve(socket);
     } catch (err) {
-      console.error("🔥 SOCKET ERROR:", err);
       socketPromise = null;
       reject(err);
     }
