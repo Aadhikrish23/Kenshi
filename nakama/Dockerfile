@@ -20,4 +20,5 @@ sleep 5 && \
 --runtime.js_entrypoint match.js \
 --socket.server_key kenshi_key \
 --logger.level DEBUG \
+--healthcheck true \
 "]
