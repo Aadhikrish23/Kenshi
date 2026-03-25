@@ -25,7 +25,7 @@ export async function connectToNakama() {
       
       const useSSL = import.meta.env.VITE_NAKAMA_SSL === "true";
 
-      const newSocket = client.createSocket(useSSL, false);
+      const newSocket = client.createSocket(useSSL, true);
 
       console.log("🔌 Connecting socket...");
 
