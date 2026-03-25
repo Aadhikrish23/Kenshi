@@ -1,4 +1,4 @@
-import { client } from "./client";
+import {  clientTCP } from "./client";
 import { login, getSession } from "./auth";
 
 let socket: any = null;
@@ -22,12 +22,7 @@ export async function connectToNakama() {
         session = await login();
       }
 
-      const newSocket = client.createSocket(
-        false, // force ws
-        true,
-        import.meta.env.VITE_NAKAMA_TCP_HOST,
-        import.meta.env.VITE_NAKAMA_TCP_PORT,
-      );
+      const newSocket = clientTCP.createSocket(false, true);
       await newSocket.connect(session, true);
 
       console.log("🔌 Socket connected");
