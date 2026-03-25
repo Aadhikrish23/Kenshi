@@ -14,5 +14,5 @@ sleep 5 && \
 --config /nakama/data/nakama.yml \
 --socket.port $PORT \
 --socket.address 0.0.0.0 \
---server.port $PORT \
+--logger.level DEBUG \
 "]
