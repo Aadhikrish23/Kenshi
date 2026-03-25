@@ -1,13 +1,34 @@
 import { client } from "./client";
 import { login, getSession } from "./auth";
+import { Session } from "@heroiclabs/nakama-js";
 
 let socket: any = null;
 let socketPromise: Promise<any> | null = null;
 
+async function getValidSession() {
+  let session = getSession();
+
+  if (!session) {
+    return await login();
+  }
+
+  // Refresh if expired or expiring within 10 seconds
+  if (session.isexpired(Date.now() / 1000 + 10)) {
+    console.log("🔄 Session expired/expiring, refreshing...");
+    try {
+      session = await client.sessionRefresh(session);
+      sessionStorage.setItem("nakama_session", JSON.stringify(session));
+    } catch (err) {
+      console.warn("⚠️ Refresh failed, re-logging in...");
+      session = await login();
+    }
+  }
+
+  return session;
+}
+
 export async function connectToNakama() {
-  // If socket exists but is disconnected, reset it
   if (socket && !socket.isConnected) {
-    console.warn("⚠️ Socket exists but disconnected, resetting...");
     socket = null;
     socketPromise = null;
   }
@@ -22,12 +43,7 @@ export async function connectToNakama() {
 
   socketPromise = (async () => {
     try {
-      let session = getSession();
-
-      if (!session) {
-        console.log("⚡ No session → auto login");
-        session = await login();
-      }
+      const session = await getValidSession();
 
       const useSSL = import.meta.env.VITE_NAKAMA_SSL === "true";
       const newSocket = client.createSocket(useSSL, false);
@@ -43,7 +59,7 @@ export async function connectToNakama() {
       };
 
       await newSocket.connect(session, true);
-      console.log("🔌 Socket connected, isConnected:", newSocket);
+      console.log("🔌 Socket connected");
 
       socket = newSocket;
       return socket;
