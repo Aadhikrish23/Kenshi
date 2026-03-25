@@ -4,39 +4,34 @@ import { login, getSession } from "./auth";
 let socket: any = null;
 let socketPromise: Promise<any> | null = null;
 
-async function getValidSession() {
-  let session = getSession();
-  if (!session) {
-    return await login();
-  }
-  if (session.isexpired(Date.now() / 1000 + 10)) {
-    try {
-      session = await client.sessionRefresh(session);
-      sessionStorage.setItem("nakama_session", JSON.stringify(session));
-    } catch {
-      session = await login();
-    }
-  }
-  return session;
-}
-
 export async function connectToNakama() {
-  if (socket) return socket;         // trust ondisconnect to clear this
-  if (socketPromise) return socketPromise;
+  if (socket && socket.isConnected) {
+    return socket;
+  }
 
-  socketPromise = (async () => {
+  if (socketPromise) {
+    return socketPromise;
+  }
+
+  socketPromise = new Promise(async (resolve, reject) => {
     try {
-      const session = await getValidSession();
-      const useSSL = import.meta.env.VITE_NAKAMA_SSL === "true";
-      const newSocket = client.createSocket(useSSL, false);
+      let session = getSession();
 
-      newSocket.ondisconnect = (evt: any) => {
+      if (!session) {
+        console.log("⚡ No session → auto login");
+        session = await login();
+      }
+
+      const useSSL = import.meta.env.VITE_NAKAMA_SSL === "true";
+      const newSocket = client.createSocket(useSSL, false); // verbose=false reduces noise
+
+      newSocket.ondisconnect = (evt) => {
         console.warn("🔌 Socket disconnected:", evt);
         socket = null;
         socketPromise = null;
       };
 
-      newSocket.onerror = (evt: any) => {
+      newSocket.onerror = (evt) => {
         console.error("❌ Socket error:", evt);
       };
 
@@ -44,14 +39,13 @@ export async function connectToNakama() {
       console.log("🔌 Socket connected");
 
       socket = newSocket;
-      return socket;
+      resolve(socket);
     } catch (err: any) {
-      console.error("❌ Connect failed:", JSON.stringify(err));
-      socket = null;
+      console.error("❌ Socket connect failed:", JSON.stringify(err), err);
       socketPromise = null;
-      throw err;
+      reject(err);
     }
-  })();
+  });
 
   return socketPromise;
 }

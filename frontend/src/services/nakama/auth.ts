@@ -7,13 +7,16 @@ const SESSION_KEY = "nakama_session";
  * Persist device ID
  */
 function getDeviceId(): string {
-  let deviceId = localStorage.getItem("deviceId"); // ← was sessionStorage
+  let deviceId = sessionStorage.getItem("deviceId");
+
   if (!deviceId) {
     deviceId = crypto.randomUUID();
-    localStorage.setItem("deviceId", deviceId);
+    sessionStorage.setItem("deviceId", deviceId);
   }
+
   return deviceId;
 }
+
 /**
  * LOGIN (manual trigger)
  */
