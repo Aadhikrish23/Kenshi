@@ -2,7 +2,7 @@ name: "nakama1"
 
 database:
   address:
-  - "postgres://postgres:yqyXqLPdXPGOWjvICVvXmvXsvMHxXQzR@postgres.railway.internal:5432/railway?sslmode=require"
+  - "${DATABASE_URL}"
 session:
   encryption_key: "your_prod_secret"
 
