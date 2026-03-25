@@ -23,7 +23,7 @@ export async function connectToNakama() {
         session = await login();
       }
 
-      const newSocket = client.createSocket(true);
+      const newSocket = client.createSocket(true,true);
       await newSocket.connect(session, false);
 
       console.log("🔌 Socket connected");
