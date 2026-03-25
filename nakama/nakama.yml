@@ -1,9 +1,7 @@
 name: "nakama1"
 
 database:
-  address: "postgres://postgres:yqyXqLPdXPGOWjvICVvXmvXsvMHxXQzR@crossover.proxy.rlwy.net:47091/railway?sslmode=require"
-  max_open_conns: 10
-  max_idle_conns: 5
+  address: "${DATABASE_URL}"
 session:
   encryption_key: "your_prod_secret"
 
