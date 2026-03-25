@@ -22,7 +22,10 @@ export async function connectToNakama() {
         session = await login();
       }
 
-      const newSocket = client.createSocket(true, true);
+      const newSocket = client.createSocket(
+        import.meta.env.VITE_NAKAMA_SSL === "true",
+        true,
+      );
       await newSocket.connect(session, true);
 
       console.log("🔌 Socket connected");
