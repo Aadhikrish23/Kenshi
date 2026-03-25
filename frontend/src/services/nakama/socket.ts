@@ -17,25 +17,31 @@ export async function connectToNakama() {
     try {
       let session = getSession();
 
-      // ✅ AUTO LOGIN (no UI interruption)
       if (!session) {
         console.log("⚡ No session → auto login");
         session = await login();
       }
 
-      const newSocket = client.createSocket(true,true);
-      await newSocket.connect(session, true);
+      const useSSL = import.meta.env.VITE_NAKAMA_SSL === "true";
+      const newSocket = client.createSocket(useSSL, false); // verbose=false reduces noise
 
+      newSocket.ondisconnect = (evt) => {
+        console.warn("🔌 Socket disconnected:", evt);
+        socket = null;
+        socketPromise = null;
+      };
+
+      newSocket.onerror = (evt) => {
+        console.error("❌ Socket error:", evt);
+      };
+
+      await newSocket.connect(session, true);
       console.log("🔌 Socket connected");
 
-      // ⚠️ DO NOT OVERRIDE LATER
-      newSocket.onmatchdata = () => {};
-      newSocket.onmatchmakermatched = () => {};
-
       socket = newSocket;
-
       resolve(socket);
-    } catch (err) {
+    } catch (err: any) {
+      console.error("❌ Socket connect failed:", JSON.stringify(err), err);
       socketPromise = null;
       reject(err);
     }
