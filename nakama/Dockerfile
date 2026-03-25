@@ -7,12 +7,17 @@ COPY nakama.yml /nakama/data/nakama.yml
 COPY modules /nakama/data/modules
 
 # Start Nakama (Railway-compatible)
+FROM heroiclabs/nakama:3.17.0
+
+COPY nakama.yml /nakama/data/nakama.yml
+COPY modules /nakama/data/modules
+
 CMD ["/bin/sh", "-c", "\
-apk add --no-cache busybox-extras && \
-echo 'Starting health server...' && \
-(while true; do echo -e 'HTTP/1.1 200 OK\n\nOK' | nc -l -p $PORT; done) & \
-sleep 5 && \
-echo 'Starting Nakama...' && \
-/nakama/nakama migrate up --database.address \"$DATABASE_URL\" && \
-/nakama/nakama --config /nakama/data/nakama.yml \
-"]
+    sleep 5 && \
+    /nakama/nakama migrate up --database.address \"$DATABASE_URL\" && \
+    /nakama/nakama \
+    --config /nakama/data/nakama.yml \
+    --socket.port $PORT \
+    --socket.address 0.0.0.0 \
+    --logger.level DEBUG \
+    "]
