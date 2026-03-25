@@ -1,5 +1,5 @@
 import { client } from "./client";
-import { Session } from "@heroiclabs/nakama-js";
+import type { Session } from "@heroiclabs/nakama-js";
 
 const SESSION_KEY = "nakama_session";
 
@@ -42,19 +42,7 @@ export function getSession(): Session | null {
   const data = sessionStorage.getItem(SESSION_KEY);
   if (!data) return null;
 
-  try {
-    const parsed = JSON.parse(data);
-
-    if (!parsed.token || !parsed.refresh_token) {
-      throw new Error("Invalid session data");
-    }
-
-    return Session.restore(parsed.token, parsed.refresh_token);
-  } catch (err) {
-    console.log("⚠️ Failed to restore session, clearing...");
-    sessionStorage.removeItem(SESSION_KEY);
-    return null;
-  }
+  return JSON.parse(data);
 }
 
 /**
