@@ -22,7 +22,6 @@ export async function connectToNakama() {
         session = await login();
       }
 
-      
       const useSSL = import.meta.env.VITE_NAKAMA_SSL === "true";
 
       const newSocket = client.createSocket(useSSL);
@@ -30,8 +29,7 @@ export async function connectToNakama() {
       console.log("🔌 Connecting socket...");
       console.log("SESSION:", session);
       // 🔥 THIS WAS MISSING
-      await newSocket.connect(session,false);
-      
+      await newSocket.connect(session, true);
 
       console.log("✅ Socket connected");
       newSocket.onmatchdata = () => {};
