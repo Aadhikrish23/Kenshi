@@ -24,7 +24,7 @@ export async function connectToNakama() {
       }
 
       const newSocket = client.createSocket(true);
-      await newSocket.connect(session, true);
+      await newSocket.connect(session, false);
 
       console.log("🔌 Socket connected");
 
