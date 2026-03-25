@@ -28,10 +28,10 @@ export async function connectToNakama() {
       const newSocket = client.createSocket(useSSL);
 
       console.log("🔌 Connecting socket...");
-
-      // 🔥 THIS WAS MISSING
-      await newSocket.connect(session, true);
       console.log("SESSION:", session);
+      // 🔥 THIS WAS MISSING
+      await newSocket.connect(session,false);
+      
 
       console.log("✅ Socket connected");
       newSocket.onmatchdata = () => {};
