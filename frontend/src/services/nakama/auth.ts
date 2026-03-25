@@ -8,15 +8,12 @@ const SESSION_KEY = "nakama_session";
  */
 function getDeviceId(): string {
   let deviceId = sessionStorage.getItem("deviceId");
-
   if (!deviceId) {
     deviceId = crypto.randomUUID();
     sessionStorage.setItem("deviceId", deviceId);
   }
-
   return deviceId;
 }
-
 /**
  * LOGIN (manual trigger)
  */
