@@ -1,0 +1,26 @@
+name: "nakama1"
+
+database:
+  address: "postgres://postgres:yqyXqLPdXPGOWjvICVvXmvXsvMHxXQzR@postgres.railway.internal:5432/railway"
+
+session:
+  encryption_key: "your_prod_secret"
+
+runtime:
+  http_key: "kenshi_key"
+  path: "/nakama/data/modules"
+  js_entrypoint: "match.js"
+
+socket:
+  port: 7350
+  address: "0.0.0.0"
+
+cors:
+  allow_origins:
+  - "*"
+  allow_methods:
+  - "GET"
+  - "POST"
+  - "OPTIONS"
+  allow_headers:
+  - "*"
